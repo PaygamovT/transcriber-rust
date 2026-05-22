@@ -125,3 +125,77 @@ impl Config {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_default_config_fields() {
+        // We need a dummy logger to ensure log statements compile during tests
+        let _ = env_logger::builder().is_test(true).try_init();
+
+        let config = Config::default();
+        assert_eq!(config.provider, "openrouter");
+        assert_eq!(config.openrouter_model, "google/gemini-3.1-flash-lite");
+        assert_eq!(config.audio_duration_limit, 30);
+        assert!(config.system_prompt.contains("pure audio transcription"));
+    }
+
+    #[test]
+    fn test_load_and_save_with_env_override() {
+        let _ = env_logger::builder().is_test(true).try_init();
+
+        let temp_home = std::env::temp_dir().join("transcriber_test_home_io");
+        let orig_userprofile = std::env::var("USERPROFILE").ok();
+        let orig_home = std::env::var("HOME").ok();
+
+        std::env::set_var("USERPROFILE", &temp_home);
+        std::env::set_var("HOME", &temp_home);
+
+        // Clear existing test directory if any
+        let config_dir = Config::get_config_dir();
+        let _ = fs::remove_dir_all(&config_dir);
+
+        // 1. Loading when nothing exists should return default and write it to disk
+        let config = Config::load();
+        assert_eq!(config.provider, "openrouter");
+        assert!(Config::get_config_file_path().exists());
+
+        // 2. Modifying and saving
+        let mut config = config;
+        config.provider = "groq".to_string();
+        config.save().unwrap();
+
+        // 3. Loading again should return the modified config
+        let reloaded = Config::load();
+        assert_eq!(reloaded.provider, "groq");
+
+        // 4. Loading corrupted file should backup to .corrupted and load defaults
+        let config_file = Config::get_config_file_path();
+        fs::write(&config_file, "invalid json data").unwrap();
+
+        let corrupted_loaded = Config::load();
+        assert_eq!(corrupted_loaded.provider, "openrouter"); // fallbacks
+        
+        let mut corrupted_backup = config_file.clone();
+        corrupted_backup.set_extension("json.corrupted");
+        assert!(corrupted_backup.exists());
+
+        // Restore original env vars
+        if let Some(val) = orig_userprofile {
+            std::env::set_var("USERPROFILE", val);
+        } else {
+            std::env::remove_var("USERPROFILE");
+        }
+        if let Some(val) = orig_home {
+            std::env::set_var("HOME", val);
+        } else {
+            std::env::remove_var("HOME");
+        }
+
+        // Cleanup
+        let _ = fs::remove_dir_all(&temp_home);
+    }
+}
