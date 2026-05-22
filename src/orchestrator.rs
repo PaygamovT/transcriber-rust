@@ -93,7 +93,10 @@ pub fn run_orchestrator(
                                     match crate::client::transcribe_audio(&current_config, &wav_bytes) {
                                         Ok(text) => {
                                             log::info!("📝 TRANSCRIPTION RESULT: '{}'", text);
-                                            // TODO: Output result via Typewriter / Clipboard (Milestone 8)
+                                            log::info!("Delivering transcription output via mode: '{}'", current_config.insert_mode);
+                                            if let Err(e) = crate::output::inject_text(&current_config.insert_mode, &text) {
+                                                log::error!("Failed to inject transcription output: {}", e);
+                                            }
                                         }
                                         Err(e) => {
                                             log::error!("Transcription request failed: {}", e);

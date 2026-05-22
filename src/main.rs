@@ -3,6 +3,7 @@ mod client;
 mod config;
 mod hotkey;
 mod orchestrator;
+mod output;
 mod tray;
 
 use std::sync::{Arc, Mutex};
