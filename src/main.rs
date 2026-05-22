@@ -1,4 +1,5 @@
 mod audio;
+mod client;
 mod config;
 mod hotkey;
 mod orchestrator;

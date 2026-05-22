@@ -87,7 +87,18 @@ pub fn run_orchestrator(
                                         "Successfully finalized in-memory WAV compilation! Captured {} bytes.",
                                         wav_bytes.len()
                                     );
-                                    // TODO: Send compiled WAV bytes to configured API Client (Milestones 5 & 6)
+                                    // 4. Send compiled WAV bytes to configured API Client (Milestones 5 & 6)
+                                    let current_config = config.lock().expect("Failed to lock config mutex");
+                                    log::info!("Initiating transcription query with provider: '{}'", current_config.provider);
+                                    match crate::client::transcribe_audio(&current_config, &wav_bytes) {
+                                        Ok(text) => {
+                                            log::info!("📝 TRANSCRIPTION RESULT: '{}'", text);
+                                            // TODO: Output result via Typewriter / Clipboard (Milestone 8)
+                                        }
+                                        Err(e) => {
+                                            log::error!("Transcription request failed: {}", e);
+                                        }
+                                    }
                                 }
                                 Err(e) => {
                                     log::error!("Failed to compile in-memory WAV bytes: {}", e);
