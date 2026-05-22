@@ -23,7 +23,8 @@ A lightweight, zero-footprint desktop utility called **Transcriber** rewritten f
 │   └── skills/              # Installed skills directory
 │       ├── audio-transcriber # Reference audio capturing and Whisper APIs patterns
 │       ├── egui-tray-application # Custom egui + tray-icon desktop lifecycle skill
-│       └── rust-best-practices # Apollo GraphQL Rust clean coding standards
+│       ├── rust-best-practices # Apollo GraphQL Rust clean coding standards
+│       └── subagent-driven-development # Multi-agent task execution and review orchestration
 ├── .ai-factory/             # AI Factory configuration and specs
 │   ├── ARCHITECTURE.md      # Project architecture guidelines (to be generated)
 │   └── DESCRIPTION.md       # High-level product and technical specification
