@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "audio-transcriber": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/audio-transcriber/SKILL.md",
+      "computedHash": "312dcdd23da2ada490cee8f6748a57d18ccb4c0705d4285cefa9c40efc65eea6"
+    },
+    "rust-best-practices": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/rust-best-practices/SKILL.md",
+      "computedHash": "3f89cd417842ca60bffefea01ee88fc28116b75a8e69329c4d6db446fbfcad02"
+    }
+  }
+}
