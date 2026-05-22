@@ -1,0 +1,39 @@
+[package]
+name = "transcriber-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# GUI and Windowing
+egui = "0.26"
+eframe = "0.26"
+
+# Tray and Global Hotkeys
+tray-icon = "0.14"
+global-hotkey = "0.5"
+
+# Audio Capture and WAV writing
+cpal = "0.15"
+hound = "3.5"
+
+# HTTP Client and Utilities
+ureq = { version = "2.9", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64 = "0.22"
+
+# Output Handlers
+arboard = "3.4"
+enigo = "0.2"
+
+# Logging and System
+log = "0.4"
+env_logger = "0.11"
+home = "0.5"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
