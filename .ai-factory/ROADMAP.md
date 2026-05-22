@@ -4,7 +4,7 @@
 
 ## Milestones
 
-- [ ] **Milestone 1: Project Skeleton & Configuration Layer** — Configure `Cargo.toml` optimized for size, establish directories, and implement `~/.transcriber/config.json` loader/saver with all default provider caching fields.
+- [x] **Milestone 1: Project Skeleton & Configuration Layer** — Configure `Cargo.toml` optimized for size, establish directories, and implement `~/.transcriber/config.json` loader/saver with all default provider caching fields.
 - [ ] **Milestone 2: System Tray & Main Event Loop** — Set up platform system tray icon using `tray-icon` with `Settings` and `Quit` items, running in a headless background loop and managed via thread communication channels.
 - [ ] **Milestone 3: Global Hotkey Listener** — Integrate the `global-hotkey` crate to capture user-defined key triggers (like `Ctrl+Shift+Space`) globally and relay state events to the background thread.
 - [ ] **Milestone 4: In-Memory Audio Capture (CPAL)** — Connect to the default input microphone, capture mono 16kHz audio in real-time, scale/normalize samples, and pack WAV headers using `hound` entirely in RAM.
@@ -19,3 +19,4 @@
 
 | Milestone | Date |
 |-----------|------|
+| Milestone 1: Project Skeleton & Configuration Layer | 2026-05-22 |
