@@ -11,7 +11,7 @@
 - [x] **Milestone 5: OpenRouter Multimodal Client** — Build `ureq` HTTP helper to encode WAV bytes into Base64 and run multimodal completions using the OpenRouter Gemini API backend.
 - [x] **Milestone 6: OpenAI & Groq Whisper Client** — Implement synchronous HTTP multipart/form-data builder to send WAV streams to standard Whisper APIs.
 - [x] **Milestone 7: AI Processing Modes** — Set up LLM text refinement pipelines to automatically strip speech stutters (Clean Mode) or translate transcriptions into English (Translate Mode).
-- [ ] **Milestone 8: Emulated Typing & Clipboard Output** — Hook up `arboard` for clipboard injection and `enigo` for layout-safe Unicode typewriter insertion at the current cursor position.
+- [x] **Milestone 8: Emulated Typing & Clipboard Output** — Hook up `arboard` for clipboard injection and `enigo` for layout-safe Unicode typewriter insertion at the current cursor position.
 - [ ] **Milestone 9: Dark-Themed Settings GUI** — Design a premium, tabbed `egui`/`eframe` dark dialog window with dynamic provider caches, password masked text boxes, and instant window context cleanup on close.
 - [ ] **Milestone 10: Size & RAM Footprint Audits** — Implement Cargo compilation profiles (LTO, strip, abort panic), audit RAM usage to guarantee under 7MB idle memory, and package final binaries.
 
@@ -26,3 +26,4 @@
 | Milestone 5: OpenRouter Multimodal Client | 2026-05-22 |
 | Milestone 6: OpenAI & Groq Whisper Client | 2026-05-22 |
 | Milestone 7: AI Processing Modes | 2026-05-22 |
+| Milestone 8: Emulated Typing & Clipboard Output | 2026-05-22 |
