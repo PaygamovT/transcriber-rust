@@ -35,12 +35,18 @@ A lightweight, zero-footprint desktop utility called **Transcriber** rewritten f
 ```
 
 ## Key Entry Points
-Currently, no Rust codebase files have been created. Implementation will start in `Cargo.toml` and `src/main.rs`.
+The project structure skeleton and persistence config layer are fully initialized:
+- `Cargo.toml`: Package configuration optimized for minimal binary footprint.
+- `src/main.rs`: Core bootstrap loop configuring debug log routines.
+- `src/config.rs`: Platforms-agnostic configuration structures.
 
 ## Documentation
 | Document | Path | Description |
 |----------|------|-------------|
-| README | README.md | Project landing page (to be generated) |
+| README | [README.md](README.md) | Project landing page |
+| Getting Started | [docs/getting-started.md](docs/getting-started.md) | Installation, setup, first steps |
+| Architecture | [docs/architecture.md](docs/architecture.md) | Project structure and patterns |
+| Configuration | [docs/configuration.md](docs/configuration.md) | Environment variables, config files |
 
 ## AI Context Files
 | File | Purpose |
@@ -48,3 +54,4 @@ Currently, no Rust codebase files have been created. Implementation will start i
 | AGENTS.md | This file — project structure map |
 | .ai-factory/DESCRIPTION.md | Project specification and tech stack |
 | .ai-factory/ARCHITECTURE.md | Architecture decisions and guidelines |
+
