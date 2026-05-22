@@ -49,33 +49,93 @@ struct WhisperResponse {
     text: String,
 }
 
-/// Transcribes in-memory WAV audio bytes using the configured API provider.
+#[derive(Serialize)]
+struct ChatCompletionMessageInput {
+    role: String,
+    content: String,
+}
+
+#[derive(Serialize)]
+struct ChatCompletionRequest {
+    model: String,
+    messages: Vec<ChatCompletionMessageInput>,
+}
+
+/// Transcribes in-memory WAV audio bytes using the configured API provider and processing mode.
 pub fn transcribe_audio(config: &crate::config::Config, wav_bytes: &[u8]) -> Result<String, String> {
     if wav_bytes.is_empty() {
         return Err("Audio buffer is empty. Nothing to transcribe.".to_string());
     }
 
     match config.provider.as_str() {
-        "openrouter" => transcribe_openrouter(config, wav_bytes),
-        "openai" => transcribe_whisper(
-            config,
-            "https://api.openai.com/v1/audio/transcriptions",
-            &config.openai_api_key,
-            &config.openai_model,
-            wav_bytes,
-        ),
-        "groq" => transcribe_whisper(
-            config,
-            "https://api.groq.com/openai/v1/audio/transcriptions",
-            &config.groq_api_key,
-            &config.groq_model,
-            wav_bytes,
-        ),
+        "openrouter" => {
+            // Select optimized prompt depending on transcription mode
+            let system_prompt = match config.transcription_mode.as_str() {
+                "clean" => "You are a professional audio transcription assistant. Transcribe the audio exactly as spoken, but clean it up by removing stutters, stammers, and filler words (like 'um', 'uh', 'like', 'ну', 'так сказать'). Keep the original language (Russian, English, or Uzbek). Output ONLY the refined transcription. No explanations.",
+                "translate" => "You are a professional audio translator. Translate the speech in the audio directly into fluent, natural English. Output ONLY the English translation. No explanations, no prefixes.",
+                _ => &config.system_prompt,
+            };
+            transcribe_openrouter(config, system_prompt, wav_bytes)
+        }
+        "openai" => {
+            let is_translate = config.transcription_mode == "translate";
+            let endpoint = if is_translate {
+                "https://api.openai.com/v1/audio/translations"
+            } else {
+                "https://api.openai.com/v1/audio/transcriptions"
+            };
+
+            let raw_text = transcribe_whisper(
+                config,
+                endpoint,
+                &config.openai_api_key,
+                &config.openai_model,
+                wav_bytes,
+            )?;
+
+            if config.transcription_mode == "clean" {
+                clean_transcription_with_llm(
+                    "https://api.openai.com/v1/chat/completions",
+                    &config.openai_api_key,
+                    &config.openai_chat_model,
+                    &raw_text,
+                )
+            } else {
+                Ok(raw_text)
+            }
+        }
+        "groq" => {
+            let is_translate = config.transcription_mode == "translate";
+            let endpoint = if is_translate {
+                "https://api.groq.com/openai/v1/audio/translations"
+            } else {
+                "https://api.groq.com/openai/v1/audio/transcriptions"
+            };
+
+            let raw_text = transcribe_whisper(
+                config,
+                endpoint,
+                &config.groq_api_key,
+                &config.groq_model,
+                wav_bytes,
+            )?;
+
+            if config.transcription_mode == "clean" {
+                clean_transcription_with_llm(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    &config.groq_api_key,
+                    &config.groq_chat_model,
+                    &raw_text,
+                )
+            } else {
+                Ok(raw_text)
+            }
+        }
         other => Err(format!("Unsupported transcription provider: '{}'", other)),
     }
 }
 
-fn transcribe_openrouter(config: &crate::config::Config, wav_bytes: &[u8]) -> Result<String, String> {
+fn transcribe_openrouter(config: &crate::config::Config, system_prompt: &str, wav_bytes: &[u8]) -> Result<String, String> {
     if config.openrouter_api_key.trim().is_empty() {
         return Err("OpenRouter API Key is empty. Please configure it in the settings panel.".to_string());
     }
@@ -92,7 +152,7 @@ fn transcribe_openrouter(config: &crate::config::Config, wav_bytes: &[u8]) -> Re
             content: vec![
                 OpenRouterMessageContentPart {
                     part_type: "text".to_string(),
-                    text: Some(config.system_prompt.clone()),
+                    text: Some(system_prompt.to_string()),
                     input_audio: None,
                 },
                 OpenRouterMessageContentPart {
@@ -212,6 +272,61 @@ fn transcribe_whisper(
     Ok(trimmed)
 }
 
+fn clean_transcription_with_llm(
+    endpoint: &str,
+    api_key: &str,
+    model: &str,
+    raw_text: &str,
+) -> Result<String, String> {
+    if raw_text.trim().is_empty() {
+        return Ok(String::new());
+    }
+
+    log::info!("Cleaning up transcription via LLM Chat Completion using model: {}", model);
+
+    let system_instruction = "You are an expert text editor. Clean up this speech transcription by removing stutters, filler words (like 'um', 'uh', 'like', 'you know', 'ну', 'это', 'так сказать'), and repeating words. Keep the original language, punctuation, and core meaning. Output ONLY the cleaned text with no explanations or metadata.";
+
+    let request_payload = ChatCompletionRequest {
+        model: model.to_string(),
+        messages: vec![
+            ChatCompletionMessageInput {
+                role: "system".to_string(),
+                content: system_instruction.to_string(),
+            },
+            ChatCompletionMessageInput {
+                role: "user".to_string(),
+                content: raw_text.to_string(),
+            },
+        ],
+    };
+
+    let response = ureq::post(endpoint)
+        .set("Authorization", &format!("Bearer {}", api_key))
+        .set("Content-Type", "application/json")
+        .send_json(serde_json::to_value(&request_payload).map_err(|e| format!("Serialization error: {}", e))?)
+        .map_err(|err| match err {
+            ureq::Error::Status(code, resp) => {
+                let err_msg = resp.into_string().unwrap_or_else(|_| "Unknown error".to_string());
+                format!("Chat Completion API error (Status {}): {}", code, err_msg)
+            }
+            ureq::Error::Transport(transport) => {
+                format!("Chat Completion network transport error: {:?}", transport)
+            }
+        })?;
+
+    let parsed: ChatCompletionResponse = response
+        .into_json()
+        .map_err(|e| format!("Failed to parse Chat Completion JSON response: {}", e))?;
+
+    if let Some(choice) = parsed.choices.first() {
+        if let Some(ref content) = choice.message.content {
+            return Ok(content.trim().to_string());
+        }
+    }
+
+    Err("Chat Completion API returned a response with no text content choice.".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +359,21 @@ mod tests {
 
         // 5. Verify closing boundary exists
         assert!(payload_str.contains("--TestBoundary123--"));
+    }
+
+    #[test]
+    fn test_chat_completion_payload_serialization() {
+        let request = ChatCompletionRequest {
+            model: "gpt-4o-mini".to_string(),
+            messages: vec![ChatCompletionMessageInput {
+                role: "user".to_string(),
+                content: "Hello".to_string(),
+            }],
+        };
+
+        let serialized = serde_json::to_string(&request).unwrap();
+        assert!(serialized.contains(r#""model":"gpt-4o-mini""#));
+        assert!(serialized.contains(r#""role":"user""#));
+        assert!(serialized.contains(r#""content":"Hello""#));
     }
 }
