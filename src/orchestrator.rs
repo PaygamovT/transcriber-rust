@@ -28,6 +28,11 @@ pub fn run_orchestrator(
     log::info!("Background event orchestrator thread successfully started.");
     let mut recording_state = false;
 
+    // Track active CPAL streaming context inside the orchestrator state
+    let mut active_stream: Option<cpal::Stream> = None;
+    let mut audio_buffer: Option<Arc<Mutex<Vec<f32>>>> = None;
+    let mut native_sample_rate: u32 = 0;
+
     for event in receiver {
         log::debug!("Orchestrator received event: {:?}", event);
 
@@ -36,10 +41,63 @@ pub fn run_orchestrator(
                 recording_state = !recording_state;
                 if recording_state {
                     log::info!("🎤 Audio recording started [State: Active]");
-                    // TODO: Connect CPAL audio capture stream (Milestone 4)
+                    match crate::audio::start_recording() {
+                        Ok(context) => {
+                            active_stream = Some(context.stream);
+                            audio_buffer = Some(context.buffer);
+                            native_sample_rate = context.sample_rate;
+                        }
+                        Err(e) => {
+                            log::error!("Failed to start dynamic microphone capture stream: {}", e);
+                            recording_state = false; // Reset state since starting failed
+                        }
+                    }
                 } else {
                     log::info!("⏹ Audio recording stopped [State: Idle]");
-                    // TODO: Finalize WAV compilation, perform AI API query, and emulate typing
+
+                    // Gracefully stop recording by taking/dropping the active CPAL stream
+                    let _stream = active_stream.take();
+
+                    if let Some(buffer_ref) = audio_buffer.take() {
+                        // Lock the buffer to extract raw captured audio frames
+                        let raw_samples = {
+                            let guard = buffer_ref
+                                .lock()
+                                .expect("Failed to lock recorded sample buffer");
+                            guard.clone()
+                        };
+
+                        log::info!(
+                            "Captured {} raw audio frames from default microphone input.",
+                            raw_samples.len()
+                        );
+
+                        if !raw_samples.is_empty() {
+                            // 1. Resample from hardware native rate to standard 16000 Hz mono
+                            let resampled =
+                                crate::audio::resample(&raw_samples, native_sample_rate, 16000);
+
+                            // 2. Perform absolute peak amplitude normalization and scale to standard signed i16 PCM
+                            let pcm_samples = crate::audio::normalize_and_convert(&resampled);
+
+                            // 3. Compile samples to standard WAV byte buffer in RAM
+                            match crate::audio::encode_wav_in_memory(&pcm_samples) {
+                                Ok(wav_bytes) => {
+                                    log::info!(
+                                        "Successfully finalized in-memory WAV compilation! Captured {} bytes.",
+                                        wav_bytes.len()
+                                    );
+                                    // TODO: Send compiled WAV bytes to configured API Client (Milestones 5 & 6)
+                                }
+                                Err(e) => {
+                                    log::error!("Failed to compile in-memory WAV bytes: {}", e);
+                                }
+                            }
+                        } else {
+                            log::warn!("No audio samples were captured. Skipping compilation.");
+                        }
+                    }
+
                     let current_config = config.lock().expect("Failed to lock config mutex");
                     log::debug!(
                         "Active transcription settings: Provider={}, Mode={}",
