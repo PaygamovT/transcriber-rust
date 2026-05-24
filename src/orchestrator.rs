@@ -71,8 +71,13 @@ pub fn run_orchestrator(
                     log::info!("⏹ Audio recording stopped [State: Idle]");
                     show_notification("TranscriberRUST", "⏹ Запись остановлена. Распознавание...");
 
-                    // Gracefully stop recording by taking/dropping the active CPAL stream
-                    let _stream = active_stream.take();
+                    // Gracefully stop recording by taking/dropping the active CPAL stream immediately.
+                    // Dropping the stream immediately releases the hardware microphone resource,
+                    // making the Windows microphone tray icon disappear instantly instead of waiting
+                    // for the network transcription request to finish.
+                    if let Some(stream) = active_stream.take() {
+                        drop(stream);
+                    }
 
                     if let Some(buffer_ref) = audio_buffer.take() {
                         // Lock the buffer to extract raw captured audio frames
