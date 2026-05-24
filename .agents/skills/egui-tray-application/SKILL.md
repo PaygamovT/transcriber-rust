@@ -29,6 +29,11 @@ To achieve ~3-7 MB idle RAM, the application must run headless in the background
 ### Threading & Main Event Loop
 Use a dedicated cross-platform main thread for the system tray loop, global hotkeys, and coordination. Since `egui`/`eframe` requires taking over the main thread on some platforms (like macOS), the tray execution must coordinate with `eframe::run_native`.
 
+> [!CRITICAL]
+> **Windows/Winit Main Thread Execution:**
+> `eframe::run_native` initialization (and any winit event loop creation) MUST run strictly on the **main thread**. Attempting to invoke `run_native` from a background `std::thread` will cause an instant panic on Windows ("Initializing the event loop outside of the main thread is a significant cross-platform compatibility hazard"). 
+> Ensure the settings window is launched synchronously on the main thread (coordinating via a channel if triggered from system-tray or other threads), using `NativeOptions` configured with `run_and_return: true` to return execution control back to the tray event loop when the window is closed.
+
 ### Tray Menu Creation (`tray-icon` Crate)
 Create a native tray icon and a menu containing `Settings` and `Quit`.
 
@@ -236,14 +241,39 @@ let response: serde_json::Value = ureq::post("https://api.openai.com/v1/audio/tr
 ### Typewriter Emulation (Unicode Insertion Hook)
 Emulate key presses character-by-character. Ensure proper Unicode compatibility for Cyrillic/Uzbek Unicode characters without depending on the user's active keyboard layout on Windows.
 - Standard typing emulation (`key_click` / `key_down`) is subject to layout mapping and can type garbage characters.
-- Use `enigo::Enigo::text` or `enigo::Keyboard::text` to perform Unicode-safe direct string insertion.
+- **WARNING:** Direct keyboard text emulation via `enigo.text()` is highly unreliable for multi-byte Unicode/non-ASCII strings (Cyrillic, Uzbek, etc.) on Windows, often corrupting or truncating the string after the first few words.
+- **SOLUTION:** Use the robust **Clipboard-Paste fallback pattern** for reliable multi-language typing insertion: save the current clipboard content, put the target text into the clipboard using `arboard`, emulate `Ctrl+V` key presses, sleep briefly to let the OS process the event, and then restore the original clipboard content.
 
 ```rust
-use enigo::{Enigo, Settings, Keyboard, Direction};
+use arboard::Clipboard;
+use enigo::{Enigo, Settings, Keyboard, Direction, Key};
+use std::thread::sleep;
+use std::time::Duration;
 
 pub fn emulate_typing(text: &str) {
-    let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    let _ = enigo.text(text);
+    // 1. Capture and backup current clipboard content
+    let mut clipboard = Clipboard::new().ok();
+    let old_content = clipboard.as_mut().and_then(|cb| cb.get_text().ok());
+    
+    // 2. Load the target text into the clipboard
+    if let Some(ref mut cb) = clipboard {
+        if cb.set_text(text).is_ok() {
+            // 3. Emulate Ctrl+V keyboard shortcut
+            if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
+                let _ = enigo.key(Key::Control, Direction::Press);
+                let _ = enigo.key(Key::Unicode('v'), Direction::Click);
+                let _ = enigo.key(Key::Control, Direction::Release);
+                
+                // Allow a brief yield for the OS buffer to complete pasting
+                sleep(Duration::from_millis(150));
+            }
+        }
+    }
+    
+    // 4. Restore original clipboard content
+    if let (Some(mut cb), Some(old)) = (clipboard, old_content) {
+        let _ = cb.set_text(&old);
+    }
 }
 ```
 

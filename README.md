@@ -2,7 +2,7 @@
 
 > Ultra-lightweight Windows system tray background utility written in pure Rust that listens for a global hotkey, captures microphone audio entirely in memory, transcribes/translates it via AI backend APIs, and types the result or copies it to the clipboard.
 
-TranscriberRUST is a high-performance, zero-footprint rewrite of a legacy Python utility. By utilizing low-level Rust libraries and a synchronous HTTP architecture, it achieves a tiny standalone binary footprint under **1 MB** and keeps RAM usage under **7 MB** while idle.
+TranscriberRUST is a high-performance, zero-footprint rewrite of a legacy Python utility. By utilizing low-level Rust libraries and a synchronous HTTP architecture, it achieves a tiny standalone binary footprint under **5 MB** (fully self-contained including all GUI and graphics assets) and keeps RAM usage under **7 MB** while idle.
 
 ---
 
@@ -35,7 +35,7 @@ $env:Path += ";C:\Users\tolib\scoop\apps\gcc\current\bin"
 cargo build --release
 
 # Run the bootstrapper
-./target/release/transcriber.exe
+./target/release/transcriber-rust.exe
 ```
 
 ---

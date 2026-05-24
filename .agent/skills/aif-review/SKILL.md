@@ -31,6 +31,8 @@ Perform thorough code reviews focusing on correctness, security, performance, an
 - [ ] Null/undefined checks
 - [ ] Error handling completeness
 - [ ] Type safety (if applicable)
+- [ ] GUI event loops (eframe/winit) run strictly on the main thread (no spawn in background thread)
+- [ ] Keyboard/typing emulation handles multi-byte/non-ASCII Unicode character input safely on Windows (using clipboard-paste fallback instead of layout-dependent raw keys)
 
 ### Security
 - [ ] SQL injection vulnerabilities

@@ -1,6 +1,7 @@
 mod audio;
 mod client;
 mod config;
+mod gui;
 mod hotkey;
 mod orchestrator;
 mod output;
@@ -63,6 +64,9 @@ fn main() {
     );
 
     loop {
+        #[cfg(target_os = "windows")]
+        pump_win32_messages();
+
         // A. Non-blocking poll for native menu item click events
         if let Ok(event) = menu_channel.try_recv() {
             log::debug!("Main thread captured menu event: {:?}", event);
@@ -101,10 +105,32 @@ fn main() {
                         log::error!("Failed to update global hotkey: {}", e);
                     }
                 }
+                orchestrator::MainThreadAction::OpenSettingsWindow => {
+                    let gui_config = config.clone();
+                    let gui_sender = event_sender.clone();
+                    log::info!("Opening settings window on the main thread...");
+                    crate::gui::open_settings_window(gui_config, gui_sender);
+                    log::info!("Settings window closed. Resuming main event loop.");
+                }
             }
         }
 
         // Rest the thread to prevent CPU spike (16ms equates to ~60Hz poll rate)
         std::thread::sleep(std::time::Duration::from_millis(16));
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn pump_win32_messages() {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE,
+    };
+    use std::mem::zeroed;
+    unsafe {
+        let mut msg: MSG = zeroed();
+        while PeekMessageW(&mut msg, 0, 0, 0, PM_REMOVE) != 0 {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
     }
 }

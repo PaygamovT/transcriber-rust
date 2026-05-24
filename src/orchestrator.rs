@@ -15,6 +15,7 @@ pub enum AppEvent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum MainThreadAction {
     ReRegisterHotkey,
+    OpenSettingsWindow,
 }
 
 /// Primary background event processing engine.
@@ -122,7 +123,9 @@ pub fn run_orchestrator(
             }
             AppEvent::OpenSettings => {
                 log::info!("🖥 Requested to launch GUI settings panel");
-                // TODO: Spin up on-demand egui/eframe window context (Milestone 9)
+                if let Err(e) = main_sender.send(MainThreadAction::OpenSettingsWindow) {
+                    log::error!("Failed to notify main thread to open settings window: {:?}", e);
+                }
             }
             AppEvent::ConfigUpdated(new_config) => {
                 log::info!("⚙ Configuration changes applied dynamically");

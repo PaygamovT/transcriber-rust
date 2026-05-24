@@ -143,7 +143,6 @@ fn transcribe_openrouter(config: &crate::config::Config, system_prompt: &str, wa
     log::info!("Preparing OpenRouter multimodal speech-to-text request.");
 
     let base64_audio = base64::prelude::BASE64_STANDARD.encode(wav_bytes);
-    let data_url = format!("data:audio/wav;base64,{}", base64_audio);
 
     let request_payload = OpenRouterRequest {
         model: config.openrouter_model.clone(),
@@ -159,7 +158,7 @@ fn transcribe_openrouter(config: &crate::config::Config, system_prompt: &str, wa
                     part_type: "input_audio".to_string(),
                     text: None,
                     input_audio: Some(InputAudioPart {
-                        data: data_url,
+                        data: base64_audio,
                         format: "wav".to_string(),
                     }),
                 },

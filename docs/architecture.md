@@ -23,7 +23,7 @@ graph TD
     
     B --> E[audio::WAVRecorder cpal]
     B --> F[client::AIClient ureq]
-    B --> G[keyboard::OutputDispatcher enigo]
+    B --> G[output::OutputDispatcher enigo]
     
     E -. In-Memory Audio bytes .-> F
     F -. Transcribed Text .-> G
@@ -45,7 +45,7 @@ Below is the horizontal code separation schema across the `src/` modules:
 | `hotkey.rs` | Hooks into low-level operating system events using `global-hotkey` to capture keystroke flags. |
 | `audio.rs` | Controls microphonic capture in a sub-thread using `cpal`, packing PCM WAV data via `hound`. |
 | `client.rs` | Performs lightweight synchronous multipart HTTP REST queries to OpenRouter, OpenAI, or Groq. |
-| `keyboard.rs` | Feeds characters using emulated hardware typing inputs (`enigo`) or system clipboard (`arboard`). |
+| `output.rs` | Feeds characters using emulated hardware typing inputs (`enigo`) or system clipboard (`arboard`). |
 
 ---
 

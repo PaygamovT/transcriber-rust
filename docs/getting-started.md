@@ -62,18 +62,19 @@ cargo test
 All tests should finish with `ok`.
 
 ### 2. Check the Executable Size
-The release profile is aggressive. Confirm that `target/release/transcriber.exe` is **under 1 MB**:
+The release profile is aggressive. Confirm that `target/release/transcriber-rust.exe` is **under 5 MB** (which packages all UI/graphics layouts, custom fonts, hotkey listeners, audio buffers, and typing emulators in a single, zero-dependency standalone package):
 ```powershell
-Get-Item .\target\release\transcriber.exe | Select-Object Name, @{Name="Size (KB)"; Expression={$_.Length / 1KB}}
+Get-Item .\target\release\transcriber-rust.exe | Select-Object Name, @{Name="Size (KB)"; Expression={$_.Length / 1KB}}
 ```
-Expect an output size of approximately **930 KB to 950 KB** (due to link-time optimization and symbol stripping).
+Expect an output size of approximately **4.5 MB to 4.8 MB** (due to extreme link-time optimization, stripping of debugging symbols, and panic abort reductions).
 
 ### 3. Run with Debug Logging
 Execute the bootstrapper and check for the debug loaded config events:
 ```powershell
 # Run with active debug logging
 $env:RUST_LOG="debug"
-.\target\debug\transcriber.exe
+$env:LIBRARY_PATH = "C:\Users\tolib\scoop\apps\gcc\current\x86_64-w64-mingw32\lib"
+.\target\debug\transcriber-rust.exe
 ```
 Verify the output displays your active config directory location:
 ```text
