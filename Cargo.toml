@@ -30,6 +30,8 @@ enigo = "0.2"
 log = "0.4"
 env_logger = "0.11"
 home = "0.5"
+image = { version = "0.24", default-features = false, features = ["png"] }
+notify-rust = "4"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52", features = ["Win32_UI_WindowsAndMessaging"] }
@@ -40,3 +42,6 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[build-dependencies]
+winres = "0.1"

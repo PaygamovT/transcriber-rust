@@ -18,6 +18,18 @@ pub enum MainThreadAction {
     OpenSettingsWindow,
 }
 
+fn show_notification(title: &str, body: &str) {
+    let title = title.to_string();
+    let body = body.to_string();
+    std::thread::spawn(move || {
+        let _ = notify_rust::Notification::new()
+            .summary(&title)
+            .body(&body)
+            .appname("Transcriber")
+            .show();
+    });
+}
+
 /// Primary background event processing engine.
 /// Monitors event messages, toggles recording status, schedules API client queries,
 /// and delegates typewriter input simulation.
@@ -47,14 +59,17 @@ pub fn run_orchestrator(
                             active_stream = Some(context.stream);
                             audio_buffer = Some(context.buffer);
                             native_sample_rate = context.sample_rate;
+                            show_notification("TranscriberRUST", "🎤 Запись началась. Говорите...");
                         }
                         Err(e) => {
                             log::error!("Failed to start dynamic microphone capture stream: {}", e);
                             recording_state = false; // Reset state since starting failed
+                            show_notification("TranscriberRUST", "❌ Ошибка запуска микрофона");
                         }
                     }
                 } else {
                     log::info!("⏹ Audio recording stopped [State: Idle]");
+                    show_notification("TranscriberRUST", "⏹ Запись остановлена. Распознавание...");
 
                     // Gracefully stop recording by taking/dropping the active CPAL stream
                     let _stream = active_stream.take();
@@ -97,19 +112,25 @@ pub fn run_orchestrator(
                                             log::info!("Delivering transcription output via mode: '{}'", current_config.insert_mode);
                                             if let Err(e) = crate::output::inject_text(&current_config.insert_mode, &text) {
                                                 log::error!("Failed to inject transcription output: {}", e);
+                                                show_notification("TranscriberRUST", "❌ Ошибка вставки текста");
+                                            } else {
+                                                show_notification("TranscriberRUST", "✅ Текст успешно вставлен!");
                                             }
                                         }
                                         Err(e) => {
                                             log::error!("Transcription request failed: {}", e);
+                                            show_notification("TranscriberRUST", "❌ Ошибка ИИ-транскрипции");
                                         }
                                     }
                                 }
                                 Err(e) => {
                                     log::error!("Failed to compile in-memory WAV bytes: {}", e);
+                                    show_notification("TranscriberRUST", "❌ Ошибка обработки аудио");
                                 }
                             }
                         } else {
                             log::warn!("No audio samples were captured. Skipping compilation.");
+                            show_notification("TranscriberRUST", "⚠️ Аудио не записано");
                         }
                     }
 

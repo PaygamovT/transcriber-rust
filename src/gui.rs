@@ -348,11 +348,31 @@ pub fn open_settings_window(
         return;
     }
 
+    // Load custom window icon
+    let icon_bytes = include_bytes!("../assets/icon.png");
+    let icon_data = image::load_from_memory_with_format(icon_bytes, image::ImageFormat::Png)
+        .ok()
+        .map(|img| {
+            let rgba = img.into_rgba8();
+            let (width, height) = rgba.dimensions();
+            egui::IconData {
+                rgba: rgba.into_raw(),
+                width,
+                height,
+            }
+        });
+
+    let mut viewport = ViewportBuilder::default()
+        .with_inner_size(Vec2::new(550.0, 520.0))
+        .with_resizable(true)
+        .with_title("Transcriber Settings");
+
+    if let Some(icon) = icon_data {
+        viewport = viewport.with_icon(icon);
+    }
+
     let options = eframe::NativeOptions {
-        viewport: ViewportBuilder::default()
-            .with_inner_size(Vec2::new(550.0, 520.0))
-            .with_resizable(true)
-            .with_title("Transcriber Settings"),
+        viewport,
         run_and_return: true,
         ..Default::default()
     };

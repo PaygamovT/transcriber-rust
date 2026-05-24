@@ -10,38 +10,17 @@ pub struct TrayManager {
     pub quit_id: MenuId,
 }
 
-/// Generates a gorgeous purple 16x16 circular tray icon programmatically in memory.
-/// This prevents any external runtime asset loading errors.
+/// Loads the gorgeous custom application icon from assets.
+/// This embeds the PNG directly into the binary at compile time.
 pub fn load_icon() -> Icon {
-    let width = 16;
-    let height = 16;
-    let mut rgba = Vec::with_capacity((width * height * 4) as usize);
-
-    for y in 0..height {
-        for x in 0..width {
-            // Compute distance from the center (7.5, 7.5)
-            let dx = x as f32 - 7.5;
-            let dy = y as f32 - 7.5;
-            let dist = (dx * dx + dy * dy).sqrt();
-
-            if dist <= 7.0 {
-                // Purple matching the visual widgets active highlight palette (#C084FC)
-                rgba.push(192); // R
-                rgba.push(132); // G
-                rgba.push(252); // B
-                rgba.push(255); // A
-            } else {
-                // Transparent background
-                rgba.push(0);
-                rgba.push(0);
-                rgba.push(0);
-                rgba.push(0);
-            }
-        }
-    }
-
+    let icon_bytes = include_bytes!("../assets/icon.png");
+    let decoded = image::load_from_memory_with_format(icon_bytes, image::ImageFormat::Png)
+        .expect("Failed to load icon from memory")
+        .into_rgba8();
+    let (width, height) = decoded.dimensions();
+    let rgba = decoded.into_raw();
     Icon::from_rgba(rgba, width, height)
-        .expect("Failed to construct 16x16 system tray icon from RGBA buffer")
+        .expect("Failed to construct system tray icon")
 }
 
 /// Initializes the native Windows system tray icon and attaches action menu triggers.
