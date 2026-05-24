@@ -18,60 +18,15 @@ pub enum MainThreadAction {
     OpenSettingsWindow,
 }
 
-#[cfg(target_os = "macos")]
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-#[cfg(target_os = "macos")]
-static ACTIVE_NOTIFICATION: Mutex<Option<notify_rust::NotificationHandle>> = Mutex::new(None);
-#[cfg(target_os = "macos")]
-static NOTIFICATION_ID: AtomicUsize = AtomicUsize::new(0);
-
 fn show_notification(title: &str, body: &str) {
     let title = title.to_string();
     let body = body.to_string();
     std::thread::spawn(move || {
-        #[cfg(target_os = "macos")]
-        {
-            let id = NOTIFICATION_ID.fetch_add(1, Ordering::SeqCst) + 1;
-
-            // 1. Dismiss the previous notification instantly to avoid queueing delays
-            if let Ok(mut guard) = ACTIVE_NOTIFICATION.lock() {
-                if let Some(handle) = guard.take() {
-                    handle.close();
-                }
-
-                // 2. Show the new notification
-                if let Ok(new_handle) = notify_rust::Notification::new()
-                    .summary(&title)
-                    .body(&body)
-                    .appname("Transcriber")
-                    .show()
-                {
-                    *guard = Some(new_handle);
-                }
-            }
-
-            // 3. Auto-dismiss the notification after 1.5 seconds to keep notifications short and clean
-            std::thread::sleep(std::time::Duration::from_millis(1500));
-
-            if let Ok(mut guard) = ACTIVE_NOTIFICATION.lock() {
-                // Only close it if another notification hasn't been shown in the meantime
-                if NOTIFICATION_ID.load(Ordering::SeqCst) == id {
-                    if let Some(handle) = guard.take() {
-                        handle.close();
-                    }
-                }
-            }
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = notify_rust::Notification::new()
-                .summary(&title)
-                .body(&body)
-                .appname("Transcriber")
-                .show();
-        }
+        let _ = notify_rust::Notification::new()
+            .summary(&title)
+            .body(&body)
+            .appname("Transcriber")
+            .show();
     });
 }
 

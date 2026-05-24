@@ -4,7 +4,10 @@ target/
 *.json.corrupted
 
 # AI Agent tooling and configuration
+.agent
 .agent/
+.agents
 .agents/
+.ai-factory
 .ai-factory/
 .ai-factory.json
