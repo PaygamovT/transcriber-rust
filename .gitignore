@@ -2,3 +2,9 @@
 target/
 **/*.rs.bk
 *.json.corrupted
+
+# AI Agent tooling and configuration
+.agent/
+.agents/
+.ai-factory/
+.ai-factory.json
