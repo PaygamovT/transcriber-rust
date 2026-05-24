@@ -33,7 +33,7 @@ impl Default for Config {
             openai_chat_model: "gpt-4o-mini".to_string(),
             groq_api_key: "".to_string(),
             groq_model: "whisper-large-v3".to_string(),
-            groq_chat_model: "llama3-8b-8192".to_string(),
+            groq_chat_model: "llama-3.1-8b-instant".to_string(),
             hotkey: "ctrl+shift+space".to_string(),
             insert_mode: "typewriter".to_string(),
             transcription_mode: "clean".to_string(),
@@ -89,8 +89,14 @@ impl Config {
         // Read and parse file
         match fs::read_to_string(&config_path) {
             Ok(content) => match serde_json::from_str::<Config>(&content) {
-                Ok(config) => {
+                Ok(mut config) => {
                     log::info!("Configuration loaded successfully.");
+                    // Migrate deprecated Groq model if present
+                    if config.groq_chat_model == "llama3-8b-8192" {
+                        log::info!("Migrating deprecated Groq chat model 'llama3-8b-8192' to 'llama-3.1-8b-instant'.");
+                        config.groq_chat_model = "llama-3.1-8b-instant".to_string();
+                        let _ = config.save();
+                    }
                     config
                 }
                 Err(e) => {

@@ -112,7 +112,17 @@ fn main() {
                     let gui_sender = event_sender.clone();
                     log::info!("Opening settings window on the main thread...");
                     crate::gui::open_settings_window(gui_config, gui_sender);
-                    log::info!("Settings window closed. Resuming main event loop.");
+                    log::info!("Settings window closed. Re-initializing global hotkey state...");
+
+                    // Re-initialize hotkey_state to re-register on the refreshed Win32 message queue
+                    hotkey_state = hotkey::HotkeyState::new();
+                    let current_hk = {
+                        let config_guard = config.lock().expect("Failed to lock config after settings close");
+                        config_guard.hotkey.clone()
+                    };
+                    if let Err(e) = hotkey_state.update_hotkey(&current_hk) {
+                        log::error!("Failed to re-register hotkey after settings close: {}", e);
+                    }
                 }
             }
         }

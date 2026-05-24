@@ -171,6 +171,7 @@ fn transcribe_openrouter(config: &crate::config::Config, system_prompt: &str, wa
         .set("Content-Type", "application/json")
         .set("HTTP-Referer", "https://github.com/tolib/TranscriberRUST")
         .set("X-Title", "Transcriber RUST")
+        .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .send_json(serde_json::to_value(&request_payload).map_err(|e| format!("Serialization error: {}", e))?)
         .map_err(|err| match err {
             ureq::Error::Status(code, resp) => {
@@ -251,6 +252,7 @@ fn transcribe_whisper(
     let response = ureq::post(endpoint)
         .set("Authorization", &format!("Bearer {}", api_key))
         .set("Content-Type", &format!("multipart/form-data; boundary={}", boundary))
+        .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .send_bytes(&body)
         .map_err(|err| match err {
             ureq::Error::Status(code, resp) => {
@@ -302,6 +304,7 @@ fn clean_transcription_with_llm(
     let response = ureq::post(endpoint)
         .set("Authorization", &format!("Bearer {}", api_key))
         .set("Content-Type", "application/json")
+        .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .send_json(serde_json::to_value(&request_payload).map_err(|e| format!("Serialization error: {}", e))?)
         .map_err(|err| match err {
             ureq::Error::Status(code, resp) => {
