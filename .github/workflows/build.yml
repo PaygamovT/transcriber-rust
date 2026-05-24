@@ -3,6 +3,7 @@ name: CI/CD Build
 on:
   push:
     branches: [ master ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ master ]
 
@@ -43,3 +44,60 @@ jobs:
           name: transcriber-macos
           path: target/release/transcriber-rust
           if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: transcriber-windows
+          path: ./release-files
+
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: transcriber-macos
+          path: ./release-files
+
+      - name: Rename Files for Release
+        run: |
+          mv ./release-files/transcriber-rust.exe ./release-files/transcriber-rust-windows.exe
+          mv ./release-files/transcriber-rust ./release-files/transcriber-rust-macos
+
+      - name: Create or Update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="latest"
+          TITLE="Latest Development Build"
+          NOTES="This release is automatically updated on every push to the master branch."
+          PRERELEASE_FLAG="--prerelease"
+          
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+            TITLE="Release ${TAG_NAME}"
+            NOTES="Official release ${TAG_NAME}."
+            PRERELEASE_FLAG=""
+            
+            gh release create "${TAG_NAME}" \
+              ./release-files/transcriber-rust-windows.exe \
+              ./release-files/transcriber-rust-macos \
+              --title "${TITLE}" \
+              --notes "${NOTES}"
+          else
+            # Delete the previous 'latest' release and its tag if it exists to allow re-creation
+            gh release delete latest --yes --cleanup-tag || true
+            
+            gh release create latest \
+              ./release-files/transcriber-rust-windows.exe \
+              ./release-files/transcriber-rust-macos \
+              --title "${TITLE}" \
+              --notes "${NOTES}" \
+              ${PRERELEASE_FLAG}
+          fi
