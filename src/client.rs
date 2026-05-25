@@ -85,24 +85,13 @@ pub fn transcribe_audio(config: &crate::config::Config, wav_bytes: &[u8]) -> Res
                 "https://api.openai.com/v1/audio/transcriptions"
             };
 
-            let raw_text = transcribe_whisper(
+            transcribe_whisper(
                 config,
                 endpoint,
                 &config.openai_api_key,
                 &config.openai_model,
                 wav_bytes,
-            )?;
-
-            if config.transcription_mode == "clean" {
-                clean_transcription_with_llm(
-                    "https://api.openai.com/v1/chat/completions",
-                    &config.openai_api_key,
-                    &config.openai_chat_model,
-                    &raw_text,
-                )
-            } else {
-                Ok(raw_text)
-            }
+            )
         }
         "groq" => {
             let is_translate = config.transcription_mode == "translate";
@@ -112,24 +101,13 @@ pub fn transcribe_audio(config: &crate::config::Config, wav_bytes: &[u8]) -> Res
                 "https://api.groq.com/openai/v1/audio/transcriptions"
             };
 
-            let raw_text = transcribe_whisper(
+            transcribe_whisper(
                 config,
                 endpoint,
                 &config.groq_api_key,
                 &config.groq_model,
                 wav_bytes,
-            )?;
-
-            if config.transcription_mode == "clean" {
-                clean_transcription_with_llm(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    &config.groq_api_key,
-                    &config.groq_chat_model,
-                    &raw_text,
-                )
-            } else {
-                Ok(raw_text)
-            }
+            )
         }
         other => Err(format!("Unsupported transcription provider: '{}'", other)),
     }

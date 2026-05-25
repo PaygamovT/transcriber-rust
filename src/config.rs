@@ -91,10 +91,29 @@ impl Config {
             Ok(content) => match serde_json::from_str::<Config>(&content) {
                 Ok(mut config) => {
                     log::info!("Configuration loaded successfully.");
+                    let mut needs_save = false;
+
                     // Migrate deprecated Groq model if present
                     if config.groq_chat_model == "llama3-8b-8192" {
                         log::info!("Migrating deprecated Groq chat model 'llama3-8b-8192' to 'llama-3.1-8b-instant'.");
                         config.groq_chat_model = "llama-3.1-8b-instant".to_string();
+                        needs_save = true;
+                    }
+
+                    // Prevent user from misconfiguring audio Whisper models as LLM Chat models
+                    if config.groq_chat_model.to_lowercase().contains("whisper") {
+                        log::warn!("Invalid Groq chat model '{}' detected (Whisper is for audio, not chat). Migrating to 'llama-3.1-8b-instant'.", config.groq_chat_model);
+                        config.groq_chat_model = "llama-3.1-8b-instant".to_string();
+                        needs_save = true;
+                    }
+
+                    if config.openai_chat_model.to_lowercase().contains("whisper") {
+                        log::warn!("Invalid OpenAI chat model '{}' detected (Whisper is for audio, not chat). Migrating to 'gpt-4o-mini'.", config.openai_chat_model);
+                        config.openai_chat_model = "gpt-4o-mini".to_string();
+                        needs_save = true;
+                    }
+
+                    if needs_save {
                         let _ = config.save();
                     }
                     config
@@ -136,6 +155,10 @@ impl Config {
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::Mutex;
+
+    // Use a static Mutex to serialize environment variable modifications across tests
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_default_config_fields() {
@@ -151,6 +174,7 @@ mod tests {
 
     #[test]
     fn test_load_and_save_with_env_override() {
+        let _guard = ENV_MUTEX.lock().unwrap();
         let _ = env_logger::builder().is_test(true).try_init();
 
         let temp_home = std::env::temp_dir().join("transcriber_test_home_io");
@@ -188,6 +212,57 @@ mod tests {
         let mut corrupted_backup = config_file.clone();
         corrupted_backup.set_extension("json.corrupted");
         assert!(corrupted_backup.exists());
+
+        // Restore original env vars
+        if let Some(val) = orig_userprofile {
+            std::env::set_var("USERPROFILE", val);
+        } else {
+            std::env::remove_var("USERPROFILE");
+        }
+        if let Some(val) = orig_home {
+            std::env::set_var("HOME", val);
+        } else {
+            std::env::remove_var("HOME");
+        }
+
+        // Cleanup
+        let _ = fs::remove_dir_all(&temp_home);
+    }
+
+    #[test]
+    fn test_whisper_chat_model_migration() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        let _ = env_logger::builder().is_test(true).try_init();
+
+        let temp_home = std::env::temp_dir().join("transcriber_test_home_whisper");
+        let orig_userprofile = std::env::var("USERPROFILE").ok();
+        let orig_home = std::env::var("HOME").ok();
+
+        std::env::set_var("USERPROFILE", &temp_home);
+        std::env::set_var("HOME", &temp_home);
+
+        let config_dir = Config::get_config_dir();
+        let _ = fs::remove_dir_all(&config_dir);
+        let _ = fs::create_dir_all(&config_dir);
+
+        // Write a configuration file where chat models are mistakenly set to Whisper models
+        let config_file = Config::get_config_file_path();
+        let bad_json = r#"{
+            "provider": "groq",
+            "groq_chat_model": "whisper-large-v3",
+            "openai_chat_model": "whisper-1"
+        }"#;
+        fs::write(&config_file, bad_json).unwrap();
+
+        // Load config - it should automatically migrate these to LLM chat models
+        let loaded = Config::load();
+        assert_eq!(loaded.groq_chat_model, "llama-3.1-8b-instant");
+        assert_eq!(loaded.openai_chat_model, "gpt-4o-mini");
+
+        // Verify it was saved back to disk
+        let saved_content = fs::read_to_string(&config_file).unwrap();
+        assert!(saved_content.contains("llama-3.1-8b-instant"));
+        assert!(saved_content.contains("gpt-4o-mini"));
 
         // Restore original env vars
         if let Some(val) = orig_userprofile {
