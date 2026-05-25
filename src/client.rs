@@ -50,12 +50,14 @@ struct WhisperResponse {
 }
 
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct ChatCompletionMessageInput {
     role: String,
     content: String,
 }
 
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct ChatCompletionRequest {
     model: String,
     messages: Vec<ChatCompletionMessageInput>,
@@ -251,6 +253,7 @@ fn transcribe_whisper(
     Ok(trimmed)
 }
 
+#[allow(dead_code)]
 fn clean_transcription_with_llm(
     endpoint: &str,
     api_key: &str,

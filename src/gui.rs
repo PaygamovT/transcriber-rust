@@ -158,9 +158,6 @@ impl eframe::App for SettingsApp {
                             ui.label("Whisper Audio Model:");
                             ui.text_edit_singleline(&mut self.local_config.openai_model);
 
-                            ui.label("Chat Processing Model:");
-                            ui.text_edit_singleline(&mut self.local_config.openai_chat_model);
-
                             ui.label("API Key:");
                             ui.horizontal(|ui| {
                                 if self.openai_key_visible {
@@ -177,7 +174,7 @@ impl eframe::App for SettingsApp {
                                     .button(if self.openai_key_visible { "👁" } else { "🙈" })
                                     .on_hover_text("Toggle API key visibility")
                                     .clicked()
-                                {
+                                  {
                                     self.openai_key_visible = !self.openai_key_visible;
                                 }
                             });
@@ -191,9 +188,6 @@ impl eframe::App for SettingsApp {
 
                             ui.label("Whisper Audio Model:");
                             ui.text_edit_singleline(&mut self.local_config.groq_model);
-
-                            ui.label("Chat Processing Model:");
-                            ui.text_edit_singleline(&mut self.local_config.groq_chat_model);
 
                             ui.label("API Key:");
                             ui.horizontal(|ui| {
